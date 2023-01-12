@@ -93,35 +93,54 @@ def stock_sell(request, pk):
     if form.is_valid():
         amount = form.cleaned_data['amount']
         price = form.cleaned_data['price']
+        
         sell_cost = price * amount
 
         acc_stock, created = AccountStock.objects.get_or_create(account=request.user.account, stock=stock,
                                                                 defaults={'average_buy_cost': 0, 'amount': 0})
-        current_cost = acc_stock.average_buy_cost * acc_stock.amount
-
-        total_cost = current_cost - sell_cost
-        total_amount = acc_stock.amount - amount
-
-        acc_stock.amount = total_amount
-        acc_stock.average_buy_cost = total_cost / total_amount
-
+        
         acc_currency, created = AccountCurrency.objects.get_or_create(account=request.user.account, currency=stock.currency,
                                                                       defaults={'amount': 0})
-
+        
+        
         if acc_stock.amount < amount:
-            form.add_error(None, f'There are not enough shares in the account {stock.currency.sign}')
+            form.add_error(None, f'There are not enough shares in the account {acc_stock.amount}')
+        elif (amount < 1):
+            form.add_error(None, f'Uncorrect amount value {amount}')
         else:
-            acc_currency.amount = acc_currency.amount + sell_cost
-            acc_stock.save()
-            acc_currency.save()
-            return redirect('stock:list')
+            
+            if(acc_stock.amount == amount):
+                acc_stock.delete()
+            else:
+                
+                current_cost = acc_stock.average_buy_cost * acc_stock.amount
+
+                total_cost = current_cost - sell_cost
+                total_amount = acc_stock.amount - amount
+
+                acc_stock.amount = total_amount
+                
+                if(total_amount != 0):
+                    acc_stock.average_buy_cost = total_cost / total_amount
+                    acc_stock.save()
+                else:
+                    acc_stock.average_buy_cost = 0
+                    acc_stock.delete()
+
+
+                acc_currency.amount = acc_currency.amount + sell_cost
+                
+                ##acc_stock.save()
+                acc_currency.save()
+             
+            return redirect('stock:list')   
 
     context = {
         'stock': get_object_or_404(Stock, pk=pk),
         'form': form
     }
 
-    return render(request, 'stock.html', context)
+    return render(request, 'stockSell.html', context)
 
 
 @login_required
