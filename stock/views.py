@@ -102,6 +102,7 @@ def stock_sell(request, pk):
         acc_currency, created = AccountCurrency.objects.get_or_create(account=request.user.account, currency=stock.currency,
                                                                       defaults={'amount': 0})
         
+
         
         if acc_stock.amount < amount:
             form.add_error(None, f'There are not enough shares in the account {acc_stock.amount}')
@@ -111,6 +112,9 @@ def stock_sell(request, pk):
             
             if(acc_stock.amount == amount):
                 acc_stock.delete()
+                acc_currency.amount = acc_currency.amount + sell_cost
+                acc_currency.save()
+                
             else:
                 
                 current_cost = acc_stock.average_buy_cost * acc_stock.amount
@@ -120,6 +124,9 @@ def stock_sell(request, pk):
 
                 acc_stock.amount = total_amount
                 
+
+
+
                 if(total_amount != 0):
                     acc_stock.average_buy_cost = total_cost / total_amount
                     acc_stock.save()
